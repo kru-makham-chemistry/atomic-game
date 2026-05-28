@@ -327,7 +327,7 @@
     <div id="screen-game" class="screen">
         <div class="status-bar">
             <span id="game-title" class="pixel-text">STAGE</span>
-            <span id="timer-display" style="display:none;">⏳ 15</span>
+            <span id="timer-display" style="display:none;">⏳ 30</span>
             <span id="game-progress" class="pixel-text">1/10</span>
         </div>
         
@@ -403,14 +403,14 @@
         { q: "อิเล็กตรอนวิ่งรอบนิวเคลียสเป็น 'ระดับพลังงาน' เป็นแนวคิดของใคร?", choices: ["ทอมสัน", "โบร์", "กลุ่มหมอก", "ดอลตัน"], ans: 1, topic: "แบบจำลองอะตอมของโบร์" },
         { q: "แบบจำลองที่บอกเพียง 'โอกาส' ในการพบอิเล็กตรอนคือแบบจำลองใด?", choices: ["กลุ่มหมอก", "ดอลตัน", "โบร์", "พลัมพุดดิ้ง"], ans: 0, topic: "แบบจำลองกลุ่มหมอก" },
         { q: "ข้อใดขัดแย้งกับทฤษฎีของดอลตันในปัจจุบัน?", choices: ["อะตอมมีขนาดเล็ก", "อะตอมแบ่งแยกไม่ได้", "อะตอมของธาตุต่างกันมีสมบัติต่างกัน", "สารประกอบเกิดจากธาตุรวมตัวกัน"], ans: 1, topic: "ข้อจำกัดของดอลตัน" },
-        { q: "อนุภาคใดที่ไม่ได้อยู่ในนิวเคลียส?", choices: ["โปรตอน", "นิวตรอน", "อิเล็กตรอน", "อนุภาคแอลฟา"], ans: 2, topic: "ตำแหน่งอนุภาคในอะตอม" },
+        { q: "อนุภาคใดที่ไม่ได้อยู่ในนิวเคลียส?", choices: ["โปรตอน", "นิวตรอน", "อิเล็กตรอน", "นิวคลีออน"], ans: 2, topic: "ตำแหน่งอนุภาคในอะตอม" },
         { q: "ใครเป็นผู้ค้นพบ 'โปรตอน' ในหลอดรังสีแคโทด?", choices: ["ทอมสัน", "โกลด์ชไตน์", "แชดวิก", "รัทเทอร์ฟอร์ด"], ans: 1, topic: "การค้นพบโปรตอน" },
         { q: "สเปกตรัมของธาตุไฮโดรเจน ใช้อธิบายแบบจำลองอะตอมของใคร?", choices: ["ดอลตัน", "ทอมสัน", "รัทเทอร์ฟอร์ด", "โบร์"], ans: 3, topic: "สเปกตรัมและแบบจำลองของโบร์" },
         { q: "เหตุใดนิวเคลียสจึงมีมวลมากแต่มีขนาดเล็กมาก?", choices: ["เพราะมีอิเล็กตรอนหนาแน่น", "เพราะเป็นที่อยู่ของโปรตอนและนิวตรอน", "เพราะเป็นของแข็ง", "เพราะมีแรงดึงดูด"], ans: 1, topic: "สมบัติของนิวเคลียส" }
     ];
     let playingStage1Data = []; 
     let timerInterval;
-    let timeLeft = 15;
+    let timeLeft = 30; // เพิ่มเวลาเป็น 30 วินาที
 
     const stage2Data = [
         { text: "จงวาดภาพ 'แบบจำลองดอลตัน' (ทรงกลมตัน)", topic: "วาดแบบจำลองดอลตัน" },
@@ -465,8 +465,11 @@
             document.getElementById('choices-container').style.display = 'none';
             document.getElementById('canvas-container').style.display = 'block';
             switchScreen('screen-game');
-            setTimeout(initCanvas, 100);
-            loadStage2Question();
+            // ใส่ setTimeout ควบคุมให้ initCanvas ดำเนินการและเตรียมวาดให้เสร็จก่อน จึงจะดึงคำถามมารอวาด เพื่อป้องกัน Error
+            setTimeout(() => {
+                initCanvas();
+                loadStage2Question();
+            }, 100);
         }
         else if (stage === 3) {
             setupMatchingGame();
@@ -496,7 +499,7 @@
 
     function startTimer() {
         clearInterval(timerInterval);
-        timeLeft = 15;
+        timeLeft = 30; // รีเซ็ตเวลาเป็น 30 วินาที
         document.getElementById('timer-display').innerText = `⏳ ${timeLeft}`;
         
         timerInterval = setInterval(() => {
@@ -549,6 +552,7 @@
 
     // --- ระบบด่าน 2 (วาดภาพ) ---
     let canvas, ctx, isDrawing = false;
+    let strokeCount = 0; // เพิ่มตัวแปรนับจำนวนการขีดเส้น
     
     function initCanvas() {
         if(canvas) { resizeCanvas(); return; }
@@ -558,12 +562,12 @@
         window.addEventListener('resize', resizeCanvas);
         resizeCanvas();
 
-        canvas.addEventListener('mousedown', (e) => { isDrawing = true; draw(e); });
+        canvas.addEventListener('mousedown', (e) => { isDrawing = true; strokeCount++; draw(e); });
         canvas.addEventListener('mouseup', () => { isDrawing = false; ctx.beginPath(); });
         canvas.addEventListener('mousemove', draw);
         canvas.addEventListener('mouseleave', () => { isDrawing = false; ctx.beginPath(); });
         
-        canvas.addEventListener('touchstart', (e) => { e.preventDefault(); isDrawing = true; drawTouch(e.touches[0]); }, {passive: false});
+        canvas.addEventListener('touchstart', (e) => { e.preventDefault(); isDrawing = true; strokeCount++; drawTouch(e.touches[0]); }, {passive: false});
         canvas.addEventListener('touchend', (e) => { e.preventDefault(); isDrawing = false; ctx.beginPath(); }, {passive: false});
         canvas.addEventListener('touchmove', (e) => { e.preventDefault(); drawTouch(e.touches[0]); }, {passive: false});
     }
@@ -595,6 +599,7 @@
     function clearCanvas() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         document.getElementById('ai-feedback').innerText = "";
+        strokeCount = 0; // รีเซ็ตการนับเมื่อล้างกระดาน
     }
 
     function loadStage2Question() {
@@ -614,7 +619,7 @@
         btn.disabled = true;
         scanner.style.display = 'block';
         scanner.style.animation = 'scan 1.5s linear infinite';
-        feedback.innerText = "🤖 กำลังตรวจสอบร่องรอย...";
+        feedback.innerText = "🤖 AI กำลังวิเคราะห์สัดส่วนของภาพ...";
         feedback.style.color = "var(--border-pixel)";
 
         setTimeout(() => {
@@ -623,21 +628,73 @@
             
             let imgData = ctx.getImageData(0,0, canvas.width, canvas.height).data;
             let coloredPixels = 0;
-            for(let i=3; i<imgData.length; i+=4) { if(imgData[i] > 50) coloredPixels++; }
             
-            if (coloredPixels > 50) {
-                feedback.innerText = "✅ ผ่าน! รับ 2 Pts";
+            // หาขอบเขตภาพวาด (Bounding Box)
+            let minX = canvas.width, maxX = 0, minY = canvas.height, maxY = 0;
+
+            for(let y=0; y<canvas.height; y++) {
+                for(let x=0; x<canvas.width; x++) {
+                    let index = (y * canvas.width + x) * 4;
+                    if(imgData[index + 3] > 50) { // เช็คความทึบของพิกเซล (Alpha)
+                        coloredPixels++;
+                        if (x < minX) minX = x;
+                        if (x > maxX) maxX = x;
+                        if (y < minY) minY = y;
+                        if (y > maxY) maxY = y;
+                    }
+                }
+            }
+
+            let drawWidth = maxX - minX;
+            let drawHeight = maxY - minY;
+            let isPass = false;
+            let aiMsg = "";
+
+            // ระบบ AI ประเมินภาพตามโครงสร้างของแบบจำลอง
+            if (coloredPixels < 80) {
+                isPass = false;
+                aiMsg = "❌ วาดน้อยเกินไป หรือภาพยังไม่ชัดเจน";
+            } else {
+                if (qData.topic === "วาดแบบจำลองดอลตัน") {
+                    // ดอลตันเป็นทรงกลมตัน ต้องวาดให้เป็นกลุ่มก้อน (ความกว้าง/ความสูงพอดีกัน)
+                    if (drawWidth < 30 || drawHeight < 30) {
+                        isPass = false; aiMsg = "❌ ทรงกลมตันเล็กเกินไป ลองวาดให้ใหญ่กว่านี้";
+                    } else {
+                        isPass = true; aiMsg = "✅ AI ตรวจพบโครงสร้างทรงกลมตัน! (2 Pts)";
+                    }
+                } else if (qData.topic === "วาดแบบจำลองทอมสัน") {
+                    // ทอมสัน ต้องวาดประจุกระจายตัว และต้องมีการยกปากกาวาดบวกลบ (วัดจาก strokeCount)
+                    if (drawWidth < 60 || drawHeight < 60) {
+                        isPass = false; aiMsg = "❌ ขนาดเล็กไป ควรมีพื้นที่ให้ประจุ + และ - กระจายอยู่";
+                    } else if (strokeCount < 4) {
+                        isPass = false; aiMsg = "❌ ขาดรายละเอียด! อย่าลืมวาดประจุ + และ - เข้าไปข้างในด้วยนะ";
+                    } else {
+                        isPass = true; aiMsg = "✅ AI ตรวจพบเนื้ออะตอมและประจุบวกลบ! (2 Pts)";
+                    }
+                } else if (qData.topic === "วาดแบบจำลองโบร์") {
+                    // โบร์ มีวงแหวนล้อมรอบ (ต้องใช้พื้นที่วาดกว้างและสูงมากๆ เพื่อทำเป็นวง)
+                    if (drawWidth < 90 || drawHeight < 90) {
+                        isPass = false; aiMsg = "❌ วงแหวนระดับพลังงานยังแคบเกินไป กรุณาวาดให้กว้างขึ้น";
+                    } else {
+                        isPass = true; aiMsg = "✅ AI ตรวจพบวงโคจรของอิเล็กตรอนรอบนิวเคลียส! (2 Pts)";
+                    }
+                }
+            }
+
+            if (isPass) {
+                feedback.innerText = aiMsg;
                 feedback.style.color = "var(--grass-green)";
                 scores.stage2 += 2;
                 gameStats.strengths.push(qData.topic);
             } else {
-                feedback.innerText = "❌ ภาพจางเกินไป / ระบุไม่ได้";
+                feedback.innerText = aiMsg;
                 feedback.style.color = "#ac3232";
                 gameStats.weaknesses.push(qData.topic);
             }
 
-            setTimeout(() => { currentQuestion++; loadStage2Question(); }, 1500);
-        }, 1500);
+            // ดีเลย์นานขึ้นเล็กน้อยให้นักเรียนได้อ่านคอมเมนต์จาก AI
+            setTimeout(() => { currentQuestion++; loadStage2Question(); }, 2500);
+        }, 2000);
     }
 
     // --- ระบบด่าน 3 (จับคู่) ---
