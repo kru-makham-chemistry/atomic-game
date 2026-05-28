@@ -1,0 +1,733 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Atomic Treasure Quest</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@400;600&family=Press+Start+2P&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --bg-dark: #2C1E16; 
+            --box-bg: #E3C193; 
+            --border-color: #3E2723; 
+            --accent-gold: #FFD700;
+            --text-dark: #3E2723;
+            --btn-hover: #D4A373;
+            --pixel-border: 4px solid var(--border-color);
+        }
+
+        * { box-sizing: border-box; touch-action: manipulation; }
+
+        body {
+            background-color: var(--bg-dark);
+            background-image: 
+                radial-gradient(#4E342E 15%, transparent 16%),
+                radial-gradient(#4E342E 15%, transparent 16%);
+            background-size: 60px 60px;
+            background-position: 0 0, 30px 30px;
+            font-family: 'Kanit', sans-serif;
+            color: var(--text-dark);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            overflow: hidden;
+        }
+
+        #game-container {
+            background-color: var(--bg-dark);
+            width: 95%;
+            max-width: 900px;
+            height: 95vh;
+            max-height: 800px;
+            border: 6px solid var(--accent-gold);
+            box-shadow: 0 0 20px rgba(255, 215, 0, 0.3), inset 0 0 20px rgba(0,0,0,0.8);
+            display: flex;
+            flex-direction: column;
+            border-radius: 8px;
+        }
+
+        .header {
+            background-color: var(--border-color);
+            border-bottom: 4px solid var(--accent-gold);
+            padding: 15px;
+            text-align: center;
+            font-family: 'Press Start 2P', cursive;
+            font-size: 1.2rem;
+            color: var(--accent-gold);
+            text-shadow: 2px 2px 0px #000;
+        }
+
+        .screen {
+            display: none;
+            flex-direction: column;
+            padding: 20px;
+            flex-grow: 1;
+            align-items: center;
+            overflow-y: auto;
+            background-color: rgba(227, 193, 147, 0.95);
+            margin: 15px;
+            border: var(--pixel-border);
+            box-shadow: inset 4px 4px 0px rgba(255,255,255,0.4), inset -4px -4px 0px rgba(0,0,0,0.2);
+        }
+        .screen.active { display: flex; }
+
+        h2, h3 { margin-top: 0; text-align: center; color: var(--border-color); }
+
+        /* Form Styles */
+        .form-group { width: 100%; max-width: 400px; margin-bottom: 15px; }
+        .form-group label { font-weight: bold; display: block; margin-bottom: 5px; }
+        .form-group input, .form-group select {
+            width: 100%; padding: 10px; border: var(--pixel-border);
+            font-family: 'Kanit', sans-serif; font-size: 1rem; background: #fff;
+        }
+        .action-btn {
+            background-color: #FFF; border: var(--pixel-border); padding: 12px 20px;
+            font-size: 1.1rem; font-family: inherit; font-weight: bold; cursor: pointer;
+            box-shadow: 4px 4px 0px var(--border-color); transition: all 0.1s; margin-top: 10px;
+        }
+        .action-btn:hover:not(:disabled) {
+            transform: translate(2px, 2px); box-shadow: 2px 2px 0px var(--border-color); background-color: var(--accent-gold);
+        }
+        .action-btn:disabled { background-color: #ccc; cursor: not-allowed; box-shadow: none; transform: translate(4px, 4px); }
+
+        /* Char Grid */
+        .char-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; width: 100%; max-width: 600px; margin-top: 20px; }
+        .char-card {
+            background-color: #F5E6CC; border: var(--pixel-border); padding: 15px;
+            text-align: center; cursor: pointer; box-shadow: 4px 4px 0px var(--border-color);
+        }
+        .char-card:hover { transform: translateY(-4px) translateX(-4px); box-shadow: 8px 8px 0px var(--border-color); background-color: var(--accent-gold); }
+        .char-emoji { font-size: 3.5rem; margin-bottom: 10px; image-rendering: pixelated; }
+
+        /* Map Screen */
+        .map-container { display: flex; flex-direction: column; gap: 20px; width: 100%; max-width: 400px; margin-top: 20px; }
+        .stage-btn {
+            background-color: #FFF; border: var(--pixel-border); padding: 20px;
+            font-size: 1.2rem; font-weight: bold; cursor: pointer; box-shadow: 4px 4px 0px var(--border-color);
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .stage-btn.locked { background-color: #999; color: #555; cursor: not-allowed; box-shadow: none; }
+        .stage-btn.completed { background-color: #90EE90; }
+
+        /* Game Elements */
+        .question-text { font-size: 1.3rem; font-weight: 600; margin-bottom: 20px; text-align: center; color: #4A0E0E; }
+        .choices-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; width: 100%; }
+        @media (max-width: 600px) { .choices-grid { grid-template-columns: 1fr; } }
+        .choice-btn {
+            background-color: #FFF; border: var(--pixel-border); padding: 15px;
+            font-size: 1.1rem; font-family: inherit; font-weight: 600; cursor: pointer;
+            box-shadow: 4px 4px 0px var(--border-color);
+        }
+
+        /* Canvas & AI Scanner */
+        #canvas-wrapper { position: relative; width: 100%; max-width: 500px; margin: 0 auto; }
+        #drawing-board { background-color: #FFF; border: var(--pixel-border); width: 100%; height: 300px; touch-action: none; cursor: crosshair; }
+        #ai-scanner {
+            position: absolute; top: 0; left: 0; width: 100%; height: 10%;
+            background: rgba(0, 255, 0, 0.4); border-bottom: 3px solid #0f0;
+            display: none; box-shadow: 0 0 15px #0f0; z-index: 10;
+        }
+        @keyframes scan {
+            0% { top: 0; }
+            50% { top: 90%; }
+            100% { top: 0; }
+        }
+        
+        /* Matching Game */
+        .match-container { display: flex; justify-content: space-between; width: 100%; gap: 10px; margin-top: 20px; }
+        .match-col { display: flex; flex-direction: column; gap: 10px; width: 48%; }
+        .match-item {
+            background-color: #FFF; border: var(--pixel-border); padding: 15px 10px;
+            text-align: center; font-weight: bold; cursor: pointer; box-shadow: 3px 3px 0px var(--border-color);
+            user-select: none; transition: background-color 0.2s;
+        }
+        .match-item.selected { background-color: var(--accent-gold); transform: scale(1.05); }
+        .match-item.matched { background-color: #90EE90; color: #555; cursor: default; box-shadow: none; transform: none; border-color: #555; }
+        
+        /* Status Bar */
+        .status-bar {
+            width: 100%; background: #fff; border: var(--pixel-border); padding: 10px;
+            display: flex; justify-content: space-between; margin-bottom: 15px; font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+
+<div id="game-container">
+    <div class="header">ATOMIC TREASURE QUEST</div>
+
+    <!-- หน้า 1: ลงทะเบียน -->
+    <div id="screen-register" class="screen active">
+        <h2>📜 ลงทะเบียนนักสำรวจ</h2>
+        <div class="form-group">
+            <label>ชื่อ-นามสกุล:</label>
+            <input type="text" id="reg-name" placeholder="ระบุชื่อ-นามสกุล">
+        </div>
+        <div class="form-group">
+            <label>เลขที่:</label>
+            <input type="number" id="reg-number" placeholder="ระบุเลขที่" min="1">
+        </div>
+        <div class="form-group">
+            <label>ระดับชั้น:</label>
+            <select id="reg-room">
+                <option value="">-- เลือกระดับชั้น --</option>
+                <option value="ม.4/1">ม.4/1</option>
+                <option value="ม.5/1">ม.5/1</option>
+                <option value="ม.5/2">ม.5/2</option>
+                <option value="ม.6/1">ม.6/1</option>
+            </select>
+        </div>
+        <button class="action-btn" style="background-color: var(--accent-gold);" onclick="submitRegister()">ดำเนินการต่อ ➡️</button>
+    </div>
+
+    <!-- หน้า 2: เลือกตัวละคร -->
+    <div id="screen-char" class="screen">
+        <h2>เลือก Avatar ของคุณ</h2>
+        <div class="char-grid">
+            <div class="char-card" onclick="selectChar('🤠')"><div class="char-emoji">🤠</div>นักล่าสมบัติ</div>
+            <div class="char-card" onclick="selectChar('🧙‍♂️')"><div class="char-emoji">🧙‍♂️</div>จอมเวทย์</div>
+            <div class="char-card" onclick="selectChar('👾')"><div class="char-emoji">👾</div>เอเลี่ยนจิ๋ว</div>
+            <div class="char-card" onclick="selectChar('🤖')"><div class="char-emoji">🤖</div>หุ่นยนต์ AI</div>
+            <div class="char-card" onclick="selectChar('🐱‍👤')"><div class="char-emoji">🐱‍👤</div>นินจาแมว</div>
+            <div class="char-card" onclick="selectChar('🕵️')"><div class="char-emoji">🕵️</div>นักสืบ</div>
+        </div>
+    </div>
+
+    <!-- หน้า 3: แผนที่ด่าน -->
+    <div id="screen-map" class="screen">
+        <div class="status-bar">
+            <span id="map-player-name">นักสำรวจ</span>
+            <span id="map-score">คะแนนรวม: 0/20</span>
+        </div>
+        <h2>🗺️ แผนที่วิหารอะตอม</h2>
+        <p>คุณต้องพิชิตด่านตามลำดับเพื่อเปิดประตูลับ</p>
+        <div class="map-container">
+            <button id="btn-stage1" class="stage-btn" onclick="startStage(1)">
+                <span>ด่าน 1: ถ้ำแห่งทฤษฎี (10 คะแนน)</span> <span id="st1-status">🔓</span>
+            </button>
+            <button id="btn-stage2" class="stage-btn locked" onclick="startStage(2)" disabled>
+                <span>ด่าน 2: แท่นวาดภาพโบราณ (6 คะแนน)</span> <span id="st2-status">🔒</span>
+            </button>
+            <button id="btn-stage3" class="stage-btn locked" onclick="startStage(3)" disabled>
+                <span>ด่าน 3: จารึกอนุภาค (4 คะแนน)</span> <span id="st3-status">🔒</span>
+            </button>
+        </div>
+        <button id="btn-finish" class="action-btn locked" style="margin-top: 30px; display: none;" onclick="showFinalResult()">🏆 ดูสรุปผลการสำรวจ</button>
+    </div>
+
+    <!-- หน้าเกมหลัก (ใช้ร่วมกันด่าน 1 และ 2) -->
+    <div id="screen-game" class="screen">
+        <div class="status-bar">
+            <span id="game-title">ด่านที่ 1</span>
+            <span id="game-timer" style="color: #B22222; font-weight: bold; display: none;">⏳ 15s</span>
+            <span id="game-progress">ข้อที่ 1/5</span>
+        </div>
+        
+        <div id="q-text" class="question-text">คำถาม...</div>
+        
+        <!-- ด่าน 1: ช้อยส์ -->
+        <div class="choices-grid" id="choices-container"></div>
+
+        <!-- ด่าน 2: วาดภาพ -->
+        <div id="canvas-container" style="display: none; width: 100%;">
+            <div id="canvas-wrapper">
+                <canvas id="drawing-board"></canvas>
+                <div id="ai-scanner"></div>
+            </div>
+            <div style="display: flex; gap: 10px; justify-content: center; margin-top: 15px;">
+                <button class="action-btn" style="background-color: #FFB6C1;" onclick="clearCanvas()">🗑️ ล้าง</button>
+                <button class="action-btn" id="btn-ai-submit" style="background-color: #90EE90;" onclick="submitDrawing()">🤖 ให้ AI ตรวจสอบ (รับ 2 คะแนน)</button>
+            </div>
+            <p id="ai-feedback" style="text-align:center; font-weight:bold; height: 20px; color:#3E2723;"></p>
+        </div>
+    </div>
+
+    <!-- ด่าน 3: จับคู่ -->
+    <div id="screen-match" class="screen">
+        <div class="status-bar">
+            <span>ด่าน 3: จารึกอนุภาค</span>
+            <span id="match-score">จับคู่สำเร็จ 0/4</span>
+        </div>
+        <div class="question-text">จับคู่อนุภาคมูลฐานกับผู้ค้นพบให้ถูกต้อง! (ได้คู่ละ 1 คะแนน)</div>
+        <div class="match-container">
+            <div class="match-col" id="match-left"></div>
+            <div class="match-col" id="match-right"></div>
+        </div>
+        <button id="btn-match-next" class="action-btn locked" style="margin-top: 20px; display: none;" onclick="finishStage(3)">ไปหน้าสรุปผล ➡️</button>
+    </div>
+
+    <!-- หน้า 4: สรุปผล -->
+    <div id="screen-end" class="screen">
+        <h2>🎉 วิเคราะห์ผลการสำรวจ 🎉</h2>
+        <h1 id="final-score" style="font-size: 3rem; margin: 10px 0; color: #8B4513;">20/20</h1>
+        
+        <div style="background: #FFF; border: var(--pixel-border); padding: 15px; width: 100%; text-align: left;">
+            <h3 style="color: #2E8B57; text-align: left;">🌟 ข้อดีของคุณ (ทำได้ถูกต้อง):</h3>
+            <ul id="strength-list" style="margin-top:5px; color:#333;"></ul>
+            
+            <h3 style="color: #B22222; text-align: left; margin-top: 15px;">⚠️ สิ่งที่ต้องทบทวนเพิ่มเติม:</h3>
+            <ul id="weakness-list" style="margin-top:5px; color:#333;"></ul>
+        </div>
+        
+        <p id="upload-status" style="font-weight:bold; color:#0000CD; margin-top:15px;">กำลังบันทึกคะแนนลงระบบ...</p>
+        <button class="action-btn" style="margin-top: 10px; width: 100%; background-color: var(--accent-gold);" onclick="location.reload()">🔄 เล่นใหม่อีกครั้ง</button>
+    </div>
+</div>
+
+<script>
+    // ---------------------------------------------------------
+    // ⚠️ นำ URL จาก Google Apps Script (ไฟล์ที่ 2) มาวางตรงนี้
+    // ---------------------------------------------------------
+    const GAS_URL = "YOUR_GOOGLE_APPS_SCRIPT_WEB_APP_URL_HERE"; 
+
+    let userData = { name: '', number: '', room: '', avatar: '', totalScore: 0 };
+    let gameStats = { strengths: [], weaknesses: [] };
+    let currentStage = 0;
+    let currentQuestion = 0;
+    let unlockedStage = 1;
+    let scores = { stage1: 0, stage2: 0, stage3: 0 };
+
+    // เพิ่มตัวแปรสำหรับระบบจับเวลาและสุ่มคำถาม (ด่าน 1)
+    let activeStage1Questions = [];
+    let timerInterval = null;
+    let timeLeft = 15;
+
+    // ข้อมูลด่าน 1 (ช้อยส์ 10 ข้อ ข้อละ 1 คะแนน = 10)
+    const stage1Data = [
+        { q: "ทฤษฎีที่กล่าวว่า 'อะตอมเป็นทรงกลมตัน แบ่งแยกไม่ได้' เป็นของใคร?", choices: ["จอห์น ดอลตัน", "เจ.เจ. ทอมสัน", "นีลส์ โบร์", "รัทเทอร์ฟอร์ด"], ans: 0, topic: "แบบจำลองอะตอมของดอลตัน" },
+        { q: "ใครค้นพบอิเล็กตรอน และเสนอแบบจำลองคล้าย 'พลัมพุดดิ้ง'?", choices: ["เจมส์ แชดวิก", "ออยเกน โกลด์ชไตน์", "เจ.เจ. ทอมสัน", "นีลส์ โบร์"], ans: 2, topic: "แบบจำลองอะตอมของทอมสัน" },
+        { q: "การยิงอนุภาคแอลฟาใส่แผ่นทองคำเปลว นำไปสู่การค้นพบสิ่งใด?", choices: ["อิเล็กตรอน", "นิวเคลียสตรงกลางอะตอม", "โปรตอน", "นิวตรอน"], ans: 1, topic: "แบบจำลองอะตอมของรัทเทอร์ฟอร์ด" },
+        { q: "อิเล็กตรอนวิ่งรอบนิวเคลียสเป็น 'ระดับพลังงาน' เป็นแนวคิดของใคร?", choices: ["ทอมสัน", "โบร์", "กลุ่มหมอก", "ดอลตัน"], ans: 1, topic: "แบบจำลองอะตอมของโบร์" },
+        { q: "แบบจำลองที่บอกเพียง 'โอกาส' ในการพบอิเล็กตรอนคือแบบจำลองใด?", choices: ["แบบจำลองกลุ่มหมอก", "แบบจำลองของดอลตัน", "แบบจำลองของโบร์", "แบบจำลองพลัมพุดดิ้ง"], ans: 0, topic: "แบบจำลองกลุ่มหมอก" },
+        { q: "การทดลองด้วย 'หลอดรังสีแคโทด' นำไปสู่การค้นพบอนุภาคใด?", choices: ["โปรตอน", "นิวตรอน", "อิเล็กตรอน", "อนุภาคแอลฟา"], ans: 2, topic: "การค้นพบอิเล็กตรอน (ทอมสัน)" },
+        { q: "แบบจำลองใดอธิบายว่า นิวเคลียสมีขนาดเล็กมากและมีมวลมากเมื่อเทียบกับขนาดอะตอม?", choices: ["รัทเทอร์ฟอร์ด", "ดอลตัน", "โบร์", "กลุ่มหมอก"], ans: 0, topic: "แบบจำลองอะตอมของรัทเทอร์ฟอร์ด" },
+        { q: "ใครเป็นผู้ค้นพบ 'นิวตรอน' ซึ่งเป็นอนุภาคที่ไม่มีประจุไฟฟ้า?", choices: ["เจ.เจ. ทอมสัน", "เจมส์ แชดวิก", "ออยเกน โกลด์ชไตน์", "นีลส์ โบร์"], ans: 1, topic: "การค้นพบนิวตรอน (แชดวิก)" },
+        { q: "ทฤษฎีที่ว่า 'อะตอมของธาตุชนิดเดียวกัน มีสมบัติเหมือนกันทุกประการ' เป็นของใคร?", choices: ["จอห์น ดอลตัน", "นีลส์ โบร์", "รัทเทอร์ฟอร์ด", "เจ.เจ. ทอมสัน"], ans: 0, topic: "แบบจำลองอะตอมของดอลตัน" },
+        { q: "แบบจำลองใดที่เปรียบเทียบวงโคจรของอิเล็กตรอนคล้ายกับ 'ระบบสุริยะ'?", choices: ["แบบจำลองกลุ่มหมอก", "แบบจำลองของดอลตัน", "แบบจำลองของโบร์", "แบบจำลองของรัทเทอร์ฟอร์ด"], ans: 2, topic: "แบบจำลองอะตอมของโบร์" }
+    ];
+
+    // ข้อมูลด่าน 2 (วาดภาพ ข้อละ 2 คะแนน = 6)
+
+    function switchScreen(screenId) {
+        document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+        document.getElementById(screenId).classList.add('active');
+    }
+
+    function submitRegister() {
+        userData.name = document.getElementById('reg-name').value.trim();
+        userData.number = document.getElementById('reg-number').value.trim();
+        userData.room = document.getElementById('reg-room').value;
+        
+        if (!userData.name || !userData.number || !userData.room) {
+            alert("โปรดกรอกข้อมูลให้ครบถ้วนก่อนเริ่มการผจญภัย!");
+            return;
+        }
+        switchScreen('screen-char');
+    }
+
+    function selectChar(emoji) {
+        userData.avatar = emoji;
+        document.getElementById('map-player-name').innerText = `${emoji} ${userData.name} (${userData.room})`;
+        switchScreen('screen-map');
+    }
+
+    // ฟังก์ชันสุ่มลำดับข้อ (Fisher-Yates Shuffle)
+    function shuffleArray(array) {
+        let shuffled = [...array];
+        for (let i = shuffled.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+        }
+        return shuffled;
+    }
+
+    // เริ่มด่านต่างๆ
+    function startStage(stage) {
+        if (stage > unlockedStage) return;
+        currentStage = stage;
+        currentQuestion = 0;
+
+        if (stage === 1) {
+            document.getElementById('game-title').innerText = "ด่านที่ 1: ถ้ำแห่งทฤษฎี";
+            document.getElementById('canvas-container').style.display = 'none';
+            document.getElementById('choices-container').style.display = 'grid';
+            document.getElementById('game-timer').style.display = 'inline'; // แสดงตัวจับเวลา
+            
+            // สุ่มคำถามทั้ง 10 ข้อก่อนเริ่มด่าน
+            activeStage1Questions = shuffleArray(stage1Data);
+            
+            switchScreen('screen-game');
+            loadStage1Question();
+        } 
+        else if (stage === 2) {
+            document.getElementById('game-title').innerText = "ด่านที่ 2: แท่นวาดภาพโบราณ";
+            document.getElementById('choices-container').style.display = 'none';
+            document.getElementById('canvas-container').style.display = 'block';
+            document.getElementById('game-timer').style.display = 'none'; // ซ่อนตัวจับเวลาในด่าน 2
+            switchScreen('screen-game');
+            initCanvas();
+            loadStage2Question();
+        }
+        else if (stage === 3) {
+            setupMatchingGame();
+            switchScreen('screen-match');
+        }
+    }
+
+    // -- ลอจิก ระบบจับเวลา ด่าน 1 --
+    function startTimer() {
+        timeLeft = 15; // ให้เวลาข้อละ 15 วินาที
+        document.getElementById('game-timer').innerText = `⏳ ${timeLeft}s`;
+        clearInterval(timerInterval);
+        timerInterval = setInterval(() => {
+            timeLeft--;
+            document.getElementById('game-timer').innerText = `⏳ ${timeLeft}s`;
+            if (timeLeft <= 0) {
+                clearInterval(timerInterval);
+                handleTimeOut(); // หมดเวลา
+            }
+        }, 1000);
+    }
+
+    function handleTimeOut() {
+        document.querySelectorAll('.choice-btn').forEach(b => b.disabled = true);
+        let qData = activeStage1Questions[currentQuestion];
+        gameStats.weaknesses.push(qData.topic + " (ตอบไม่ทัน)");
+        
+        // ไฮไลต์ข้อที่ถูกให้ดูด้วยเฉดสีเขียว แม้จะตอบไม่ทัน
+        document.querySelectorAll('.choice-btn')[qData.ans].style.backgroundColor = "#90EE90";
+        
+        setTimeout(() => {
+            currentQuestion++;
+            loadStage1Question();
+        }, 1500);
+    }
+
+    // -- ลอจิก ด่าน 1 --
+    function loadStage1Question() {
+        if (currentQuestion >= activeStage1Questions.length) {
+            finishStage(1);
+            return;
+        }
+        document.getElementById('game-progress').innerText = `ข้อที่ ${currentQuestion + 1}/${activeStage1Questions.length}`;
+        let qData = activeStage1Questions[currentQuestion];
+        document.getElementById('q-text').innerText = qData.q;
+        
+        let choicesHtml = '';
+        qData.choices.forEach((c, idx) => {
+            choicesHtml += `<button class="choice-btn" onclick="checkStage1(${idx}, this)">${c}</button>`;
+        });
+        document.getElementById('choices-container').innerHTML = choicesHtml;
+        
+        startTimer(); // เริ่มจับเวลาทุกครั้งที่โหลดคำถามใหม่
+    }
+
+    function checkStage1(idx, btn) {
+        clearInterval(timerInterval); // หยุดเวลาทันทีที่เด็กกดตอบ
+        let qData = activeStage1Questions[currentQuestion];
+        document.querySelectorAll('.choice-btn').forEach(b => b.disabled = true);
+        
+        if (idx === qData.ans) {
+            btn.style.backgroundColor = "#90EE90";
+            scores.stage1 += 1; // เปลี่ยนเป็นข้อละ 1 คะแนน (รวม 10 ข้อ = 10 คะแนน)
+            gameStats.strengths.push(qData.topic);
+        } else {
+            btn.style.backgroundColor = "#FFB6C1";
+            document.querySelectorAll('.choice-btn')[qData.ans].style.backgroundColor = "#90EE90";
+            gameStats.weaknesses.push(qData.topic);
+        }
+        
+        setTimeout(() => {
+            currentQuestion++;
+            loadStage1Question();
+        }, 1200);
+    }
+
+    // -- ลอจิก ด่าน 2 (วาดภาพ + AI ตรวจสอบ) --
+    let canvas, ctx, isDrawing = false;
+    
+    function initCanvas() {
+        if(canvas) return; // ทำครั้งเดียว
+        canvas = document.getElementById('drawing-board');
+        ctx = canvas.getContext('2d');
+        
+        function resize() {
+            let wrapper = document.getElementById('canvas-wrapper');
+            // ปรับแก้ให้รองรับหน้าจอมือถือความละเอียดสูง (High DPI/Retina Display) ลดอาการเส้นไม่ตรงนิ้ว
+            let ratio = window.devicePixelRatio || 1;
+            let rect = wrapper.getBoundingClientRect();
+            
+            canvas.style.width = rect.width + 'px';
+            canvas.style.height = '300px'; 
+            
+            // ขยายพิกเซลภายในให้คมชัดและตรงพิกัด
+            canvas.width = rect.width * ratio;
+            canvas.height = 300 * ratio;
+            
+            ctx.scale(ratio, ratio);
+            
+            // ตั้งค่าหัวปากกาใหม่หลัง scale
+            ctx.lineWidth = 6; // เพิ่มความหนาให้วาดง่ายขึ้น
+            ctx.lineCap = 'round'; // หัวมน
+            ctx.lineJoin = 'round'; // รอยต่อเส้นโค้งสมูท
+            ctx.strokeStyle = '#3E2723';
+        }
+        resize();
+        window.addEventListener('resize', resize);
+
+        // รวม Events ทั้งเมาส์และนิ้วสัมผัสให้เสถียร
+        canvas.addEventListener('mousedown', startDraw);
+        canvas.addEventListener('mouseup', endDraw);
+        canvas.addEventListener('mousemove', draw);
+        canvas.addEventListener('mouseleave', endDraw); // ป้องกันลากเมาส์หลุดจอแล้ววาดค้าง
+
+        // Touch events สำหรับมือถือ (ใส่ passive: false เพื่อให้ใช้ preventDefault ได้)
+        canvas.addEventListener('touchstart', startDraw, {passive: false});
+        canvas.addEventListener('touchend', endDraw, {passive: false});
+        canvas.addEventListener('touchmove', draw, {passive: false});
+    }
+
+    // ฟังก์ชันคำนวณพิกัดให้แม่นยำ (รองรับทั้งเมาส์และนิ้ว)
+    function getPos(e) {
+        let rect = canvas.getBoundingClientRect();
+        let clientX = e.clientX;
+        let clientY = e.clientY;
+        
+        if (e.touches && e.touches.length > 0) {
+            clientX = e.touches[0].clientX;
+            clientY = e.touches[0].clientY;
+        }
+        
+        return {
+            x: clientX - rect.left,
+            y: clientY - rect.top
+        };
+    }
+
+    function startDraw(e) {
+        e.preventDefault(); // ป้องกันหน้าจอมือถือขยับเวลาเริ่มวาด
+        isDrawing = true;
+        draw(e); // ให้วาดจุดแรกทันทีที่แตะลงไป
+    }
+
+    function endDraw(e) {
+        e.preventDefault();
+        isDrawing = false;
+        ctx.beginPath(); // รีเซ็ตเส้นใหม่ ไม่ให้ลากเชื่อมกับจุดเดิม
+    }
+
+    function draw(e) {
+        if (!isDrawing) return;
+        e.preventDefault(); // ป้องกันการเลื่อนหน้าจอ (Scroll) ขณะกำลังวาด
+        
+        let pos = getPos(e);
+        ctx.lineTo(pos.x, pos.y);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(pos.x, pos.y);
+    }
+
+    function clearCanvas() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        document.getElementById('ai-feedback').innerText = "";
+    }
+
+    function loadStage2Question() {
+        if (currentQuestion >= stage2Data.length) { finishStage(2); return; }
+        document.getElementById('game-progress').innerText = `รูปที่ ${currentQuestion + 1}/${stage2Data.length}`;
+        document.getElementById('q-text').innerText = stage2Data[currentQuestion].text;
+        clearCanvas();
+        document.getElementById('btn-ai-submit').disabled = false;
+    }
+
+    function submitDrawing() {
+        let btn = document.getElementById('btn-ai-submit');
+        let scanner = document.getElementById('ai-scanner');
+        let feedback = document.getElementById('ai-feedback');
+        let qData = stage2Data[currentQuestion];
+        
+        btn.disabled = true;
+        scanner.style.display = 'block';
+        scanner.style.animation = 'scan 1.5s linear infinite';
+        feedback.innerText = "🤖 AI กำลังวิเคราะห์ร่องรอย...";
+        feedback.style.color = "#333";
+
+        setTimeout(() => {
+            scanner.style.display = 'none';
+            scanner.style.animation = 'none';
+            
+            let imgData = ctx.getImageData(0,0, canvas.width, canvas.height).data;
+            let coloredPixels = 0;
+            for(let i=3; i<imgData.length; i+=4) { if(imgData[i] > 50) coloredPixels++; }
+            
+            if (coloredPixels > 100) {
+                feedback.innerText = "✅ AI ตรวจพบแบบจำลองที่สมบูรณ์! รับ 2 คะแนน";
+                feedback.style.color = "green";
+                scores.stage2 += 2;
+                gameStats.strengths.push(qData.topic);
+            } else {
+                feedback.innerText = "❌ ภาพว่างเปล่าเกินไป หรือไม่สามารถระบุได้";
+                feedback.style.color = "red";
+                gameStats.weaknesses.push(qData.topic);
+            }
+
+            setTimeout(() => { currentQuestion++; loadStage2Question(); }, 2000);
+        }, 2000);
+    }
+
+    // ด่าน 3
+    let selectedLeft = null, selectedRight = null, matchCount = 0;
+
+    function setupMatchingGame() {
+        matchCount = 0;
+        document.getElementById('match-score').innerText = `จับคู่สำเร็จ 0/4`;
+        document.getElementById('btn-match-next').style.display = 'none';
+        
+        let leftItems = [...stage3Pairs].sort(() => Math.random() - 0.5);
+        let rightItems = [...stage3Pairs].sort(() => Math.random() - 0.5);
+        
+        document.getElementById('match-left').innerHTML = leftItems.map(p => `<div class="match-item left-item" data-match="${p.match}" onclick="selectMatch('left', this)">${p.item}</div>`).join('');
+        document.getElementById('match-right').innerHTML = rightItems.map(p => `<div class="match-item right-item" data-match="${p.match}" onclick="selectMatch('right', this)">${p.match}</div>`).join('');
+    }
+
+    function selectMatch(side, elem) {
+        if(elem.classList.contains('matched')) return;
+
+        if (side === 'left') {
+            document.querySelectorAll('.left-item').forEach(el => el.classList.remove('selected'));
+            selectedLeft = elem;
+        } else {
+            document.querySelectorAll('.right-item').forEach(el => el.classList.remove('selected'));
+            selectedRight = elem;
+        }
+        elem.classList.add('selected');
+
+        if (selectedLeft && selectedRight) checkMatch();
+    }
+
+    function checkMatch() {
+        let leftVal = selectedLeft.dataset.match;
+        let rightVal = selectedRight.dataset.match;
+
+        if (leftVal === rightVal) {
+            selectedLeft.classList.replace('selected', 'matched');
+            selectedRight.classList.replace('selected', 'matched');
+            
+            scores.stage3 += 1;
+            matchCount++;
+            document.getElementById('match-score').innerText = `จับคู่สำเร็จ ${matchCount}/4`;
+            
+            if (!gameStats.strengths.includes("การค้นพบอนุภาคมูลฐาน")) gameStats.strengths.push("การค้นพบอนุภาคมูลฐาน");
+        } else {
+            selectedLeft.classList.remove('selected');
+            selectedRight.classList.remove('selected');
+            selectedLeft.style.backgroundColor = "#FFB6C1";
+            selectedRight.style.backgroundColor = "#FFB6C1";
+            
+            if (!gameStats.weaknesses.includes("การค้นพบอนุภาคมูลฐาน (จับคู่ผิด)")) gameStats.weaknesses.push("การค้นพบอนุภาคมูลฐาน (จับคู่ผิด)");
+
+            setTimeout(() => {
+                if(!selectedLeft.classList.contains('matched')) selectedLeft.style.backgroundColor = "#FFF";
+                if(!selectedRight.classList.contains('matched')) selectedRight.style.backgroundColor = "#FFF";
+            }, 500);
+        }
+        
+        selectedLeft = null;
+        selectedRight = null;
+
+        if (matchCount === 4) {
+            document.getElementById('btn-match-next').style.display = 'block';
+            document.getElementById('btn-match-next').classList.remove('locked');
+        }
+    }
+
+    function finishStage(stage) {
+        if (stage === 1) {
+            unlockedStage = 2;
+            document.getElementById('btn-stage1').classList.add('completed');
+            document.getElementById('st1-status').innerText = '✅';
+            document.getElementById('btn-stage2').classList.remove('locked');
+            document.getElementById('btn-stage2').disabled = false;
+            document.getElementById('st2-status').innerText = '🔓';
+        } 
+        else if (stage === 2) {
+            unlockedStage = 3;
+            document.getElementById('btn-stage2').classList.add('completed');
+            document.getElementById('st2-status').innerText = '✅';
+            document.getElementById('btn-stage3').classList.remove('locked');
+            document.getElementById('btn-stage3').disabled = false;
+            document.getElementById('st3-status').innerText = '🔓';
+        }
+        else if (stage === 3) {
+            document.getElementById('btn-stage3').classList.add('completed');
+            document.getElementById('st3-status').innerText = '✅';
+            document.getElementById('btn-finish').style.display = 'block';
+            document.getElementById('btn-finish').classList.remove('locked');
+        }
+        
+        updateTotalScore();
+        switchScreen('screen-map');
+    }
+
+    function updateTotalScore() {
+        userData.totalScore = scores.stage1 + scores.stage2 + scores.stage3;
+        document.getElementById('map-score').innerText = `คะแนนรวม: ${userData.totalScore}/20`;
+    }
+
+    function showFinalResult() {
+        switchScreen('screen-end');
+        document.getElementById('final-score').innerText = `${userData.totalScore}/20`;
+
+        document.getElementById('strength-list').innerHTML = gameStats.strengths.length > 0 ? 
+            gameStats.strengths.map(s => `<li>✔️ ${s}</li>`).join('') : "<li>ยังต้องฝึกฝนเพิ่มเติม</li>";
+        
+        document.getElementById('weakness-list').innerHTML = gameStats.weaknesses.length > 0 ? 
+            [...new Set(gameStats.weaknesses)].map(w => `<li>❌ ${w}</li>`).join('') : "<li>สมบูรณ์แบบ! ไม่มีข้อบกพร่อง</li>";
+
+        sendDataToGoogleSheets();
+    }
+
+    function sendDataToGoogleSheets() {
+        let statusText = document.getElementById('upload-status');
+        
+        if (GAS_URL === "YOUR_GOOGLE_APPS_SCRIPT_WEB_APP_URL_HERE") {
+            statusText.innerText = "⚠️ เล่นโหมดออฟไลน์ (ไม่ได้เชื่อมต่อ Google Sheets)";
+            statusText.style.color = "#B22222";
+            return;
+        }
+
+        let payload = {
+            timestamp: new Date().toLocaleString('th-TH'),
+            name: userData.name,
+            number: userData.number,
+            room: userData.room,
+            score1: scores.stage1,
+            score2: scores.stage2,
+            score3: scores.stage3,
+            total: userData.totalScore
+        };
+
+        fetch(GAS_URL, {
+            method: 'POST',
+            mode: 'no-cors',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        })
+        .then(() => {
+            statusText.innerText = "✅ บันทึกคะแนนลงระบบเรียบร้อยแล้ว!";
+            statusText.style.color = "green";
+        })
+        .catch(err => {
+            statusText.innerText = "❌ เกิดข้อผิดพลาดในการบันทึกข้อมูล";
+            statusText.style.color = "red";
+        });
+    }
+</script>
+
+</body>
+</html>
